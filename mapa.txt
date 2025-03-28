@@ -1,0 +1,329 @@
+// import React, { useState, useRef, useEffect } from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   Platform,
+//   Dimensions,
+// } from 'react-native';
+// import { Navigation, Layers, RefreshCw, Shield, TriangleAlert as AlertTriangle, MapPin } from 'lucide-react-native';
+// import { LinearGradient } from 'expo-linear-gradient';
+// import { BlurView } from 'expo-blur';
+// import MapView, { Marker } from 'react-native-maps';
+
+// // Mock data for safe routes and danger zones
+// const MOCK_SAFE_ROUTES = [
+//   { id: 1, coordinates: [
+//     { latitude: 19.4326, longitude: -99.1332 },
+//     { latitude: 19.4326, longitude: -99.1342 },
+//     { latitude: 19.4336, longitude: -99.1342 },
+//   ]},
+//   { id: 2, coordinates: [
+//     { latitude: 19.4326, longitude: -99.1352 },
+//     { latitude: 19.4336, longitude: -99.1352 },
+//     { latitude: 19.4336, longitude: -99.1362 },
+//   ]},
+// ];
+
+// const MOCK_DANGER_ZONES = [
+//   {
+//     id: 1,
+//     coordinate: { latitude: 19.4346, longitude: -99.1332 },
+//     title: 'Zona de Riesgo',
+//     description: 'Se han reportado incidentes en esta área',
+//   },
+//   {
+//     id: 2,
+//     coordinate: { latitude: 19.4316, longitude: -99.1352 },
+//     title: 'Área Peligrosa',
+//     description: 'Evitar durante horarios nocturnos',
+//   },
+// ];
+
+// const incidentes = [
+//   {
+//     id: 1,
+//     latitude: 19.4326,
+//     longitude: -99.1332,
+//     titulo: "Incidente Reportado",
+//     descripcion: "Posible arma detectada",
+//     confianza: 0.807,
+//   },
+// ];
+
+// export default function Mapa() {
+//   const [region, setRegion] = useState({
+//     latitude: 19.4326,
+//     longitude: -99.1332,
+//     latitudeDelta: 0.01,
+//     longitudeDelta: 0.01,
+//   });
+
+//   return (
+//     <View style={styles.container}>
+//       <MapView style={styles.map} region={region}>
+//         {incidentes.map((incidente) => (
+//           <Marker
+//             key={incidente.id}
+//             coordinate={{
+//               latitude: incidente.latitude,
+//               longitude: incidente.longitude,
+//             }}
+//             title={incidente.titulo}
+//             description={incidente.descripcion}
+//             pinColor={incidente.confianza > 0.7 ? "red" : "orange"}
+//           />
+//         ))}
+//       </MapView>
+//     </View>
+//   );
+// }
+
+// export default function mapa() {
+//   const [mapType, setMapType] = useState('standard');
+  
+//   const initialRegion = {
+//     latitude: 19.4326,
+//     longitude: -99.1332,
+//     latitudeDelta: 0.0122,
+//     longitudeDelta: 0.0121,
+//   };
+
+//   const centerMap = () => {
+//     // Implement map centering logic
+//   };
+
+//   const toggleMapType = () => {
+//     setMapType(prev => prev === 'standard' ? 'satellite' : 'standard');
+//   };
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Temporary Map Placeholder for Web */}
+//       <View style={styles.map}>
+//         <View style={styles.mapPlaceholder}>
+//           <MapPin size={48} color="#3b82f6" />
+//           <Text style={styles.placeholderText}>
+//             Mapa no disponible en la versión web
+//           </Text>
+//           <Text style={styles.placeholderSubtext}>
+//             Por favor, utilice la aplicación móvil para acceder a todas las funciones del mapa
+//           </Text>
+//         </View>
+//       </View>
+
+//       {/* Info Panel */}
+//       <BlurView intensity={80} tint="light" style={styles.infoPanel}>
+//         <View style={styles.infoPanelContent}>
+//           <View style={styles.infoHeader}>
+//             <Shield size={20} color="#3b82f6" />
+//             <Text style={styles.infoTitle}>Información de Seguridad</Text>
+//           </View>
+//           <View style={styles.infoStats}>
+//             <View style={styles.statItem}>
+//               <Text style={styles.statValue}>2</Text>
+//               <Text style={styles.statLabel}>Rutas Seguras</Text>
+//             </View>
+//             <View style={styles.statDivider} />
+//             <View style={styles.statItem}>
+//               <Text style={styles.statValue}>2</Text>
+//               <Text style={styles.statLabel}>Zonas de Riesgo</Text>
+//             </View>
+//           </View>
+//         </View>
+//       </BlurView>
+
+//       {/* Action Buttons */}
+//       <View style={styles.actionButtons}>
+//         <TouchableOpacity onPress={centerMap} style={styles.actionButton}>
+//           <LinearGradient
+//             colors={['#3b82f6', '#2563eb']}
+//             style={styles.actionGradient}
+//           >
+//             <Navigation size={24} color="#fff" />
+//           </LinearGradient>
+//         </TouchableOpacity>
+
+//         <TouchableOpacity onPress={toggleMapType} style={styles.actionButton}>
+//           <LinearGradient
+//             colors={['#3b82f6', '#2563eb']}
+//             style={styles.actionGradient}
+//           >
+//             <Layers size={24} color="#fff" />
+//           </LinearGradient>
+//         </TouchableOpacity>
+
+//         <TouchableOpacity style={styles.actionButton}>
+//           <LinearGradient
+//             colors={['#3b82f6', '#2563eb']}
+//             style={styles.actionGradient}
+//           >
+//             <RefreshCw size={24} color="#fff" />
+//           </LinearGradient>
+//         </TouchableOpacity>
+//       </View>
+
+//       {/* Location Pin */}
+//       <View style={styles.locationPin}>
+//         <LinearGradient
+//           colors={['#f97316', '#ea580c']}
+//           style={styles.locationGradient}
+//         >
+//           <MapPin size={24} color="#fff" />
+//         </LinearGradient>
+//       </View>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: '#fff',
+//   },
+//   map: {
+//     width: '100%',
+//     height: '100%',
+//     backgroundColor: '#f8fafc',
+//   },
+//   mapPlaceholder: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     gap: 16,
+//   },
+//   placeholderText: {
+//     fontSize: 18,
+//     fontWeight: '600',
+//     color: '#1e293b',
+//     textAlign: 'center',
+//   },
+//   placeholderSubtext: {
+//     fontSize: 14,
+//     color: '#64748b',
+//     textAlign: 'center',
+//     maxWidth: 300,
+//   },
+//   infoPanel: {
+//     position: 'absolute',
+//     bottom: 100,
+//     left: 16,
+//     right: 16,
+//     borderRadius: 16,
+//     overflow: 'hidden',
+//     ...Platform.select({
+//       web: {
+//         backdropFilter: 'blur(8px)',
+//         backgroundColor: 'rgba(255, 255, 255, 0.8)',
+//       },
+//     }),
+//   },
+//   infoPanelContent: {
+//     padding: 16,
+//   },
+//   infoHeader: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     gap: 8,
+//     marginBottom: 12,
+//   },
+//   infoTitle: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     color: '#1e293b',
+//   },
+//   infoStats: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-around',
+//     alignItems: 'center',
+//   },
+//   statItem: {
+//     alignItems: 'center',
+//   },
+//   statValue: {
+//     fontSize: 24,
+//     fontWeight: '700',
+//     color: '#1e293b',
+//   },
+//   statLabel: {
+//     fontSize: 12,
+//     color: '#64748b',
+//     marginTop: 4,
+//   },
+//   statDivider: {
+//     width: 1,
+//     height: 40,
+//     backgroundColor: '#e2e8f0',
+//   },
+//   actionButtons: {
+//     position: 'absolute',
+//     right: 16,
+//     bottom: 200,
+//     gap: 12,
+//   },
+//   actionButton: {
+//     borderRadius: 12,
+//     overflow: 'hidden',
+//     ...Platform.select({
+//       web: {
+//         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+//       },
+//       default: {
+//         elevation: 2,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//       },
+//     }),
+//   },
+//   actionGradient: {
+//     padding: 12,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+//   locationPin: {
+//     position: 'absolute',
+//     left: 16,
+//     top: Platform.OS === 'web' ? 16 : 60,
+//     borderRadius: 12,
+//     overflow: 'hidden',
+//     ...Platform.select({
+//       web: {
+//         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+//       },
+//       default: {
+//         elevation: 2,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//       },
+//     }),
+//   },
+//   locationGradient: {
+//     padding: 12,
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//   },
+//   dangerMarker: {
+//     backgroundColor: 'white',
+//     padding: 8,
+//     borderRadius: 8,
+//     ...Platform.select({
+//       web: {
+//         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+//       },
+//       default: {
+//         elevation: 2,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 4,
+//       },
+//     }),
+//   },
+//   container: { flex: 1 },
+//   map: { width: "100%", height: "100%" },
+// });

@@ -72,6 +72,7 @@ const navigateToAlertas = () =>{
       style={styles.container}
       onLayout={onLayoutRootView}
       showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 67 }} // Espacio extra en la parte inferior
     >
       <View style={styles.header}>
         <Text style={styles.greeting}>DracIA</Text>

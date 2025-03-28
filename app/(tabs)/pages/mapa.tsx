@@ -1,287 +1,390 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  Dimensions,
-} from 'react-native';
-import { Navigation, Layers, RefreshCw, Shield, TriangleAlert as AlertTriangle, MapPin } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+  Animated,
+  Easing,
+} from "react-native";
+import MapView, { Marker, MapType } from "react-native-maps";
+import * as Location from "expo-location";
+import {
+  MaterialIcons,
+  FontAwesome,
+  Ionicons,
+  Entypo,
+} from "@expo/vector-icons";
 
-// Mock data for safe routes and danger zones
-const MOCK_SAFE_ROUTES = [
-  { id: 1, coordinates: [
-    { latitude: 19.4326, longitude: -99.1332 },
-    { latitude: 19.4326, longitude: -99.1342 },
-    { latitude: 19.4336, longitude: -99.1342 },
-  ]},
-  { id: 2, coordinates: [
-    { latitude: 19.4326, longitude: -99.1352 },
-    { latitude: 19.4336, longitude: -99.1352 },
-    { latitude: 19.4336, longitude: -99.1362 },
-  ]},
-];
-
-const MOCK_DANGER_ZONES = [
+const alertData = [
   {
-    id: 1,
-    coordinate: { latitude: 19.4346, longitude: -99.1332 },
-    title: 'Zona de Riesgo',
-    description: 'Se han reportado incidentes en esta área',
+    fecha: "2025-03-27",
+    hora: "09:37:31",
+    ubicacion: { latitude: 20.9141, longitude: -100.7456 }, // Jardín Principal
+    confianza: 0.807,
+    tipo: "arma",
   },
   {
-    id: 2,
-    coordinate: { latitude: 19.4316, longitude: -99.1352 },
-    title: 'Área Peligrosa',
-    description: 'Evitar durante horarios nocturnos',
+    fecha: "2025-03-27",
+    hora: "09:37:32",
+    ubicacion: { latitude: 20.918, longitude: -100.7439 }, // Mercado de Artesanías
+    confianza: 0.47,
+    tipo: "arma",
+  },
+  {
+    fecha: "2025-03-27",
+    hora: "09:37:33",
+    ubicacion: { latitude: 20.9075, longitude: -100.7412 }, // Parque Benito Juárez
+    confianza: 0.65,
+    tipo: "arma",
+  },
+  {
+    fecha: "2025-03-27",
+    hora: "09:37:34",
+    ubicacion: { latitude: 20.9213, longitude: -100.7387 }, // Mirador (Callejón del Chorro)
+    confianza: 0.72,
+    tipo: "arma",
+  },
+  {
+    fecha: "2025-03-27",
+    hora: "09:37:35",
+    ubicacion: { latitude: 20.9118, longitude: -100.7524 }, // Templo de San Francisco
+    confianza: 0.55,
+    tipo: "arma",
   },
 ];
 
-export default function mapa() {
-  const [mapType, setMapType] = useState('standard');
-  
-  const initialRegion = {
-    latitude: 19.4326,
-    longitude: -99.1332,
-    latitudeDelta: 0.0122,
-    longitudeDelta: 0.0121,
-  };
+const getColorFromConfidence = (confianza: number): string => {
+  if (confianza >= 0.7) return "red";
+  if (confianza >= 0.5) return "orange";
+  if (confianza >= 0.4) return "yellow";
+  return "green";
+};
 
-  const centerMap = () => {
-    // Implement map centering logic
+const AlertMap = () => {
+  const [location, setLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mapType, setMapType] = useState<MapType>("standard");
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [showsBuildings, setShowsBuildings] = useState(false);
+  const [isMapMoved, setIsMapMoved] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [forceUpdateMarker, setForceUpdateMarker] = useState(0);
+
+  const mapRef = useRef<MapView>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const controlsAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setErrorMsg("Permiso de ubicación denegado");
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location.coords);
+    })();
+  }, []);
+
+  const goToCurrentLocation = async () => {
+    let location = await Location.getCurrentPositionAsync({});
+    setLocation(location.coords);
+    setForceUpdateMarker((prev) => prev + 1); // <-- Fuerza la actualización
+    mapRef.current?.animateToRegion({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    });
+    setIsMapMoved(false);
   };
 
   const toggleMapType = () => {
-    setMapType(prev => prev === 'standard' ? 'satellite' : 'standard');
+    const types: MapType[] = ["standard", "satellite", "hybrid"];
+    const currentIndex = types.indexOf(mapType);
+    const nextIndex = (currentIndex + 1) % types.length;
+    setMapType(types[nextIndex]);
+  };
+
+  const toggleTraffic = () => {
+    setShowTraffic(!showTraffic);
+  };
+
+  const toggleBuildings = () => {
+    setShowsBuildings(!showsBuildings);
+  };
+
+  const handleMapDrag = () => {
+    if (!isMapMoved) {
+      setIsMapMoved(true);
+      fadeIn();
+    }
+  };
+
+  const fadeIn = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const fadeOut = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const toggleControls = () => {
+    if (controlsVisible) {
+      Animated.timing(controlsAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start(() => setControlsVisible(false));
+    } else {
+      setControlsVisible(true);
+      Animated.timing(controlsAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const handleReturnToLocation = () => {
+    goToCurrentLocation();
+    fadeOut();
+    setTimeout(() => setIsMapMoved(false), 300);
   };
 
   return (
     <View style={styles.container}>
-      {/* Temporary Map Placeholder for Web */}
-      <View style={styles.map}>
-        <View style={styles.mapPlaceholder}>
-          <MapPin size={48} color="#3b82f6" />
-          <Text style={styles.placeholderText}>
-            Mapa no disponible en la versión web
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            Por favor, utilice la aplicación móvil para acceder a todas las funciones del mapa
-          </Text>
-        </View>
-      </View>
-
-      {/* Info Panel */}
-      <BlurView intensity={80} tint="light" style={styles.infoPanel}>
-        <View style={styles.infoPanelContent}>
-          <View style={styles.infoHeader}>
-            <Shield size={20} color="#3b82f6" />
-            <Text style={styles.infoTitle}>Información de Seguridad</Text>
-          </View>
-          <View style={styles.infoStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>2</Text>
-              <Text style={styles.statLabel}>Rutas Seguras</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>2</Text>
-              <Text style={styles.statLabel}>Zonas de Riesgo</Text>
-            </View>
-          </View>
-        </View>
-      </BlurView>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity onPress={centerMap} style={styles.actionButton}>
-          <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
-            style={styles.actionGradient}
+      {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+      {location ? (
+        <>
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            mapType={mapType}
+            showsTraffic={showTraffic}
+            showsBuildings={showsBuildings}
+            initialRegion={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
+            }}
+            onPanDrag={handleMapDrag}
           >
-            <Navigation size={24} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+            <Marker
+              key={`user-location-${forceUpdateMarker}`} // <-- Key única que cambia
+              coordinate={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+              }}
+              title="Tu ubicación"
+              description="Ubicación actual del dispositivo"
+              pinColor="blue"
+            />
+            {alertData.map((alert, index) => (
+              <Marker
+                key={index}
+                coordinate={alert.ubicacion}
+                title={`Alerta: ${alert.tipo}`}
+                description={`Confianza: ${alert.confianza}`}
+                pinColor={getColorFromConfidence(alert.confianza)}
+              />
+            ))}
+          </MapView>
 
-        <TouchableOpacity onPress={toggleMapType} style={styles.actionButton}>
-          <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
-            style={styles.actionGradient}
+          {/* Botón de menú principal */}
+          <TouchableOpacity
+            style={[styles.floatingButton, styles.menuButton]}
+            onPress={toggleControls}
           >
-            <Layers size={24} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+            <Entypo
+              name={controlsVisible ? "cross" : "menu"}
+              size={24}
+              color="white"
+            />
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
-          <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
-            style={styles.actionGradient}
-          >
-            <RefreshCw size={24} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+          {/* Controles principales (derecha) */}
+          {controlsVisible && (
+            <Animated.View
+              style={[styles.mainControls, { opacity: controlsAnim }]}
+            >
+              <TouchableOpacity
+                style={[styles.controlButton, styles.controlButtonLarge]}
+                onPress={goToCurrentLocation}
+              >
+                <MaterialIcons name="my-location" size={24} color="white" />
+              </TouchableOpacity>
 
-      {/* Location Pin */}
-      <View style={styles.locationPin}>
-        <LinearGradient
-          colors={['#f97316', '#ea580c']}
-          style={styles.locationGradient}
-        >
-          <MapPin size={24} color="#fff" />
-        </LinearGradient>
-      </View>
+              <TouchableOpacity
+                style={[styles.controlButton, styles.controlButtonLarge]}
+                onPress={toggleMapType}
+              >
+                <MaterialIcons
+                  name={mapType === "satellite" ? "map" : "satellite"}
+                  size={24}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          {/* Controles secundarios (inferior izquierda) */}
+          {controlsVisible && (
+            <Animated.View
+              style={[styles.secondaryControls, { opacity: controlsAnim }]}
+            >
+              <TouchableOpacity
+                style={[styles.smallButton, showTraffic && styles.activeButton]}
+                onPress={toggleTraffic}
+              >
+                <FontAwesome
+                  name="car"
+                  size={18}
+                  color={showTraffic ? "white" : "#007AFF"}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          {/* Botón de regreso a ubicación (solo aparece al mover) */}
+          {isMapMoved && (
+            <Animated.View style={[styles.returnButton, { opacity: fadeAnim }]}>
+              <TouchableOpacity
+                style={styles.returnButtonContent}
+                onPress={handleReturnToLocation}
+              >
+                <Ionicons name="locate" size={20} color="white" />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </>
+      ) : (
+        <Text style={styles.loadingText}>Cargando ubicación...</Text>
+      )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
   },
   map: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f8fafc',
-  },
-  mapPlaceholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
+    width: "100%",
   },
-  placeholderText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    textAlign: 'center',
-  },
-  placeholderSubtext: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    maxWidth: 300,
-  },
-  infoPanel: {
-    position: 'absolute',
-    bottom: 100,
-    left: 16,
-    right: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(8px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-      },
-    }),
-  },
-  infoPanelContent: {
-    padding: 16,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  infoTitle: {
+  errorText: {
+    color: "red",
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "bold",
+    margin: 10,
   },
-  infoStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+  loadingText: {
+    fontSize: 16,
+    color: "gray",
   },
-  statItem: {
-    alignItems: 'center',
+  floatingButton: {
+    position: "absolute",
+    backgroundColor: "#007AFF",
+    borderRadius: 30,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
+  menuButton: {
+    top: 60,
+    right: 20,
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 4,
+  mainControls: {
+    position: "absolute",
+    top: 120,
+    right: 20,
+    alignItems: "center",
   },
-  statDivider: {
-    width: 1,
+  controlButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 25,
+    marginBottom: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  controlButtonLarge: {
+    width: 50,
+    height: 50,
+  },
+  secondaryControls: {
+    position: "absolute",
+    bottom: 30,
+    left: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 20,
+    padding: 10,
+    flexDirection: "column",
+    elevation: 3,
+    paddingBottom: 55,
+  },
+  smallButton: {
+    width: 40,
     height: 40,
-    backgroundColor: '#e2e8f0',
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 5,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    backgroundColor: "white",
   },
-  actionButtons: {
-    position: 'absolute',
-    right: 16,
-    bottom: 200,
-    gap: 12,
+  activeButton: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
-  actionButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-    }),
+  returnButton: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#007AFF",
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
   },
-  actionGradient: {
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  locationPin: {
-    position: 'absolute',
-    left: 16,
-    top: Platform.OS === 'web' ? 16 : 60,
-    borderRadius: 12,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-    }),
-  },
-  locationGradient: {
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dangerMarker: {
-    backgroundColor: 'white',
-    padding: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-    }),
+  returnButtonContent: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
+
+export default AlertMap;
