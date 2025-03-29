@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Platform } from 'react-native';
 import useWebSocket, { Alerta } from '../../services/WebSocketService';
 
 const AlertasScreen = () => {
@@ -31,7 +31,12 @@ const getPriorityColor = (confianza: number) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  container: { 
+    flex: 1, 
+    padding: 20, 
+    backgroundColor: '#fff',
+    paddingTop: Platform.OS === "web" ? 24 : 60,
+  },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
   alert: { padding: 15, marginVertical: 5, borderRadius: 10 },
   alertTitle: { fontSize: 16, fontWeight: 'bold' },
