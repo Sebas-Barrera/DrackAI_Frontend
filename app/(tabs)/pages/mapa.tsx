@@ -83,7 +83,6 @@ const AlertMap = () => {
         setErrorMsg("Permiso de ubicación denegado");
         return;
       }
-
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location.coords);
     })();

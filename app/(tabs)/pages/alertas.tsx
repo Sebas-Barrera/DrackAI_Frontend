@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,56 +7,45 @@ import {
   TouchableOpacity,
   Platform,
   TextInput,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
-import { Shield, Bell, Calendar, Search, ChevronRight, Filter } from 'lucide-react-native';
+import { Shield, Bell, Calendar, Search, ChevronRight, Filter, Wifi, WifiOff } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+
+// Importar nuestro servicio WebSocket
+import { useWebSocket } from '../../services/WebSocketService';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Mock data for alerts
+// Tipo para las alertas
 type Alert = {
-  id: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  priority: 'high' | 'medium' | 'low';
-  type: string;
-  location: string;
+  id?: string;
+  titulo?: string;
+  title?: string; 
+  description?: string;
+  descripcion?: string;
+  timestamp?: string;
+  priority?: 'high' | 'medium' | 'low';
+  type?: string;
+  tipo?: string;
+  location?: string;
+  ubicacion?: string;
+  fecha?: string;
+  hora?: string;
+  confianza?: number;
 };
 
-const MOCK_ALERTS: Alert[] = [
-  {
-    id: '1',
-    title: 'Alerta de Seguridad',
-    description: 'Se ha reportado actividad sospechosa en la zona norte del campus.',
-    timestamp: '2024-02-20T10:30:00Z',
-    priority: 'high',
-    type: 'security',
-    location: 'Zona Norte',
-  },
-  {
-    id: '2',
-    title: 'Precaución',
-    description: 'Obras de mantenimiento en proceso. Se recomienda tomar rutas alternativas.',
-    timestamp: '2024-02-20T09:15:00Z',
-    priority: 'medium',
-    type: 'maintenance',
-    location: 'Zona Central',
-  },
-  {
-    id: '3',
-    title: 'Información',
-    description: 'Nueva ruta segura disponible para estudiantes nocturnos.',
-    timestamp: '2024-02-20T08:45:00Z',
-    priority: 'low',
-    type: 'info',
-    location: 'Campus General',
-  },
-];
+// Función para convertir el nivel de confianza a prioridad
+const confianzaAPrioridad = (confianza: number): 'high' | 'medium' | 'low' => {
+  if (confianza >= 0.7) return 'high';
+  if (confianza >= 0.5) return 'medium';
+  return 'low';
+};
 
 const getPriorityColor = (priority: string): [string, string] => {
   switch (priority) {
@@ -84,10 +73,48 @@ const getPriorityIcon = (priority: string) => {
   }
 };
 
+// Función para convertir las alertas del WebSocket al formato que espera la UI
+const formatearAlerta = (alerta: any, index: number): Alert => {
+  // Si la alerta ya tiene el formato correcto, devolverla tal cual
+  if (alerta.title && alerta.description) {
+    return alerta;
+  }
+
+  // Crear un ID único si no existe
+  const id = alerta.id || `alerta-${index}-${Date.now()}`;
+  
+  // Formatear los datos según lo que venga del servidor
+  return {
+    id,
+    titulo: alerta.tipo ? `Alerta: ${alerta.tipo}` : "Alerta de Seguridad",
+    descripcion: `Alerta detectada con nivel de confianza: ${(alerta.confianza * 100).toFixed(0)}%`,
+    priority: confianzaAPrioridad(alerta.confianza || 0),
+    location: alerta.ubicacion || "Ubicación desconocida",
+    fecha: alerta.fecha,
+    hora: alerta.hora,
+    confianza: alerta.confianza,
+    tipo: alerta.tipo
+  };
+};
+
 export default function alertas() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Usar nuestro hook WebSocket
+  const { alertas, conectado, ultimaAlerta } = useWebSocket();
+  
+  // Estado local para las alertas formateadas
+  const [alertasFormateadas, setAlertasFormateadas] = useState<Alert[]>([]);
+
+  // Formatear las alertas cuando se reciban del WebSocket
+  useEffect(() => {
+    if (alertas && alertas.length > 0) {
+      const formateadas = alertas.map((alerta, index) => formatearAlerta(alerta, index));
+      setAlertasFormateadas(formateadas);
+    }
+  }, [alertas]);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -101,38 +128,71 @@ export default function alertas() {
     }
   }, [fontsLoaded]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Simular tiempo de carga
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
   if (!fontsLoaded) {
     return null;
   }
 
-  const renderAlert = ({ item }: { item: Alert }) => (
-    <TouchableOpacity style={styles.alertCard}>
-      <View style={styles.alertHeader}>
-        <LinearGradient
-          colors={getPriorityColor(item.priority)}
-          style={styles.priorityIndicator}
-        >
-          {getPriorityIcon(item.priority)}
-        </LinearGradient>
-        <View style={styles.alertHeaderText}>
-          <Text style={styles.alertTitle}>{item.title}</Text>
-          <Text style={styles.alertLocation}>{item.location}</Text>
+  // Filtrar alertas según el texto de búsqueda
+  const alertasFiltradas = alertasFormateadas.filter(alerta => {
+    const terminoBusqueda = searchQuery.toLowerCase();
+    return (
+      (alerta.titulo?.toLowerCase().includes(terminoBusqueda) || false) ||
+      (alerta.descripcion?.toLowerCase().includes(terminoBusqueda) || false) ||
+      (alerta.location?.toLowerCase().includes(terminoBusqueda) || false) ||
+      (alerta.tipo?.toLowerCase().includes(terminoBusqueda) || false)
+    );
+  });
+
+  const renderAlert = ({ item }: { item: Alert }) => {
+    // Determinar prioridad
+    const priority = item.priority || confianzaAPrioridad(item.confianza || 0);
+    
+    return (
+      <TouchableOpacity style={styles.alertCard}>
+        <View style={styles.alertHeader}>
+          <LinearGradient
+            colors={getPriorityColor(priority)}
+            style={styles.priorityIndicator}
+          >
+            {getPriorityIcon(priority)}
+          </LinearGradient>
+          <View style={styles.alertHeaderText}>
+            <Text style={styles.alertTitle}>{item.titulo || item.title}</Text>
+            <Text style={styles.alertLocation}>{item.location || item.ubicacion || "Ubicación sin definir"}</Text>
+          </View>
+          <ChevronRight size={20} color="#64748b" />
         </View>
-        <ChevronRight size={20} color="#64748b" />
-      </View>
-      
-      <Text style={styles.alertDescription}>{item.description}</Text>
-      
-      <View style={styles.alertFooter}>
-        <Text style={styles.alertTimestamp}>
-          {new Date(item.timestamp).toLocaleTimeString('es-ES', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        
+        <Text style={styles.alertDescription}>{item.descripcion || item.description}</Text>
+        
+        <View style={styles.alertFooter}>
+          <Text style={styles.alertTimestamp}>
+            {item.fecha && item.hora ? `${item.fecha} ${item.hora}` : 
+             item.timestamp ? new Date(item.timestamp).toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }) : new Date().toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+          {item.confianza !== undefined && (
+            <Text style={styles.confianzaText}>
+              Confianza: {(item.confianza * 100).toFixed(0)}%
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
@@ -165,15 +225,47 @@ export default function alertas() {
             <Calendar size={20} color="#3b82f6" />
           </TouchableOpacity>
         </View>
+        
+        {/* Indicador de estado de conexión */}
+        <View style={styles.connectionStatus}>
+          {conectado ? (
+            <View style={styles.connectedContainer}>
+              <Wifi size={16} color="#16a34a" />
+              <Text style={styles.connectedText}>Conectado al servidor</Text>
+            </View>
+          ) : (
+            <View style={styles.disconnectedContainer}>
+              <WifiOff size={16} color="#dc2626" />
+              <Text style={styles.disconnectedText}>Desconectado</Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      <FlatList
-        data={MOCK_ALERTS}
-        renderItem={renderAlert}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.alertsList}
-        showsVerticalScrollIndicator={false}
-      />
+      {alertasFiltradas.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Bell size={60} color="#d1d5db" />
+          <Text style={styles.emptyText}>
+            {conectado 
+              ? "No hay alertas disponibles" 
+              : "Esperando conexión con el servidor..."}
+          </Text>
+          {!conectado && <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />}
+        </View>
+      ) : (
+        <FlatList
+          data={alertasFiltradas}
+          renderItem={renderAlert}
+          keyExtractor={(item, index) => item.id || `alert-${index}`}
+          contentContainerStyle={styles.alertsList}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
+      )}
+
+     
     </View>
   );
 }
@@ -186,7 +278,7 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'web' ? 24 : 60,
     paddingHorizontal: 22,
-    paddingBottom: 16,
+    
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
@@ -297,15 +389,22 @@ const styles = StyleSheet.create({
   },
   alertFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   alertTimestamp: {
     fontFamily: 'Inter-Regular',
     fontSize: 12,
     color: '#64748b',
   },
+  confianzaText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: '#64748b',
+  },
   statsPanel: {
     position: 'absolute',
+    paddingBottom: 300,
     bottom: 32,
     left: 16,
     right: 16,
@@ -342,5 +441,54 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     backgroundColor: '#e2e8f0',
+  },
+  connectionStatus: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  connectedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  connectedText: {
+    color: '#16a34a',
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  disconnectedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  disconnectedText: {
+    color: '#dc2626',
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  loader: {
+    marginTop: 20,
   },
 });
