@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 
-const WEBSOCKET_URL = 'ws://192.168.1.109:8080'; // Ajusta con la IP real del servidor
+const WEBSOCKET_URL = 'ws://192.168.0.10:8080'; // Ajusta con la IP real del servidor
 
 /**
  * @typedef {Object} Alerta

@@ -59,7 +59,7 @@ export default function configuracion() {
         <View style={styles.headerTop}>
           <View style={styles.titleContainer}>
             <View style={styles.iconContainer}>
-              <Settings size={24} color="#1e293b" />
+              <Settings size={24} color="#000000" />
             </View>
             <Text style={styles.title}>Configuración</Text>
           </View>
