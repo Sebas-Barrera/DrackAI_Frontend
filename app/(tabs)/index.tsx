@@ -112,7 +112,7 @@ export default function HomeScreen() {
             {/* Placeholder for logo */}
             <View style={styles.logoContainer}>
               <Image
-                source={{ uri: 'https://via.placeholder.com/50' }}
+                source={require('@/assets/images/logosfinales-02.png')}
                 style={styles.logo}
               />
             </View>
@@ -124,12 +124,12 @@ export default function HomeScreen() {
           </View>
 
           {/* User Avatar (placeholder) */}
-          <TouchableOpacity style={styles.avatarContainer}>
+          {/* <TouchableOpacity style={styles.avatarContainer}>
             <Image
               source={{ uri: 'https://via.placeholder.com/40' }}
               style={styles.avatar}
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </LinearGradient>
 
@@ -194,20 +194,7 @@ export default function HomeScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#36b37e', '#57d9a3']}
-                start={[0, 0]}
-                end={[1, 1]}
-                style={styles.actionGradient}
-              >
-                <Bookmark color="#fff" size={24} />
-                <Text style={styles.actionText}>Guardados</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+           
           </View>
         </View>
 
@@ -338,7 +325,8 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 1,
+    backgroundColor: 'rgba(255, 255, 255, 255)',
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
@@ -346,7 +334,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    resizeMode: 'contain'
   },
   greeting: {
     fontFamily: 'Inter-Bold',

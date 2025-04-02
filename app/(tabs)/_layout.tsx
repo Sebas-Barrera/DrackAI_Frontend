@@ -105,7 +105,14 @@ export default function TabLayout() {
           }),
         },
         tabBarItemStyle: {
-          paddingVertical: 6
+          paddingVertical: 6,
+          flexDirection: 'column',
+          alignItems: 'center',
+          height: Platform.OS === 'android' ? 60 : 65,
+        },
+        tabBarIconStyle: {
+          width: 40,
+          height: 40,
         },
         tabBarActiveTintColor: '#1A3D9E',
         tabBarInactiveTintColor: '#94a3b8',
@@ -170,11 +177,12 @@ const styles = StyleSheet.create({
   tabButtonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: -2, // Ajusta la posición del icono hacia arriba
   },
   tabButtonBackground: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 38, // Reducido de 46 a 38
+    height: 38, // Reducido de 46 a 38
+    borderRadius: 19, // La mitad del nuevo tamaño
     justifyContent: 'center',
     alignItems: 'center',
   }
