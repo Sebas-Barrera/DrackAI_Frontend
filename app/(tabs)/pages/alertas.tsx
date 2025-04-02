@@ -1,12 +1,19 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, Pressable } from 'react-native';
-import useWebSocket, { Alerta } from '../../services/WebSocketService';
-import { 
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Platform,
+  Pressable,
+} from "react-native";
+import useWebSocket, { Alerta } from "../../services/WebSocketService";
+import {
   OctagonAlert as AlertOctagon,
   TriangleAlert as AlertTriangle,
   CircleAlert as AlertCircle,
   Info,
-  Bell
+  Bell,
 } from "lucide-react-native";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -49,7 +56,14 @@ const AlertasScreen = () => {
     const priority = getPriorityFromConfidence(item.confianza);
     const Icon = PriorityConfig[priority].icon;
     const color = PriorityConfig[priority].color;
-    
+
+    // Extraer la dirección basada en el tipo de ubicación
+    const direccion = item.ubicacion
+      ? typeof item.ubicacion === "string"
+        ? item.ubicacion
+        : item.ubicacion.direccion || "Ubicación no especificada"
+      : "Ubicación no disponible";
+
     return (
       <View style={styles.card}>
         <Pressable
@@ -65,13 +79,16 @@ const AlertasScreen = () => {
               <Icon size={24} color={color} />
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>{item.tipo}</Text>
+              <Text style={styles.title}>
+                {item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}
+              </Text>
+
               <View style={styles.detailsRow}>
                 <Text style={styles.confidence}>
                   Confianza: {(item.confianza * 100).toFixed(1)}%
                 </Text>
                 <Text style={styles.timestamp}>
-                  {item.fecha && item.hora 
+                  {item.fecha && item.hora
                     ? `${item.fecha} ${item.hora}`
                     : formatDistanceToNow(new Date(), {
                         addSuffix: true,
@@ -79,9 +96,7 @@ const AlertasScreen = () => {
                       })}
                 </Text>
               </View>
-              {item.descripcion && (
-                <Text style={styles.location}>{item.descripcion}</Text>
-              )}
+              <Text style={styles.location}>{direccion}</Text>
             </View>
           </View>
         </Pressable>

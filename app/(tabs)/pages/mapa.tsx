@@ -15,44 +15,7 @@ import {
   Ionicons,
   Entypo,
 } from "@expo/vector-icons";
-
-const alertData = [
-  {
-    fecha: "2025-03-27",
-    hora: "09:37:31",
-    ubicacion: { latitude: 20.9141, longitude: -100.7456 }, // Jardín Principal
-    confianza: 0.807,
-    tipo: "arma",
-  },
-  {
-    fecha: "2025-03-27",
-    hora: "09:37:32",
-    ubicacion: { latitude: 20.918, longitude: -100.7439 }, // Mercado de Artesanías
-    confianza: 0.47,
-    tipo: "arma",
-  },
-  {
-    fecha: "2025-03-27",
-    hora: "09:37:33",
-    ubicacion: { latitude: 20.9075, longitude: -100.7412 }, // Parque Benito Juárez
-    confianza: 0.65,
-    tipo: "arma",
-  },
-  {
-    fecha: "2025-03-27",
-    hora: "09:37:34",
-    ubicacion: { latitude: 20.9213, longitude: -100.7387 }, // Mirador (Callejón del Chorro)
-    confianza: 0.72,
-    tipo: "arma",
-  },
-  {
-    fecha: "2025-03-27",
-    hora: "09:37:35",
-    ubicacion: { latitude: 20.9118, longitude: -100.7524 }, // Templo de San Francisco
-    confianza: 0.55,
-    tipo: "arma",
-  },
-];
+import useWebSocketService, { Alerta } from "@/app/services/WebSocketService";
 
 const getColorFromConfidence = (confianza: number): string => {
   if (confianza >= 0.7) return "red";
@@ -75,6 +38,7 @@ const AlertMap = () => {
   const mapRef = useRef<MapView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const controlsAnim = useRef(new Animated.Value(1)).current;
+  const alerts = useWebSocketService();
 
   useEffect(() => {
     (async () => {
@@ -166,6 +130,40 @@ const AlertMap = () => {
     setTimeout(() => setIsMapMoved(false), 300);
   };
 
+  const getAlertCoordinates = (alert: Alerta) => {
+    if (!alert.ubicacion) return null;
+
+    try {
+      // Si es string, extraer coordenadas
+      if (typeof alert.ubicacion === "string") {
+        const coordMatch = alert.ubicacion.match(/\(([^)]+)\)/);
+        if (!coordMatch) return null;
+
+        const coords = coordMatch[1]
+          .split(",")
+          .map((s) => parseFloat(s.trim()));
+        if (coords.length !== 2 || coords.some(isNaN)) return null;
+
+        return { latitude: coords[0], longitude: coords[1] };
+      }
+
+      // Si es objeto, validar coordenadas
+      if (typeof alert.ubicacion === "object") {
+        const lat = alert.ubicacion.latitude;
+        const lng = alert.ubicacion.longitude;
+
+
+        if (isNaN(lat) || isNaN(lng)) return null;
+
+        return { latitude: lat, longitude: lng };
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error procesando ubicación:", error);
+      return null;
+    }
+  };
   return (
     <View style={styles.container}>
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
@@ -186,7 +184,7 @@ const AlertMap = () => {
             onPanDrag={handleMapDrag}
           >
             <Marker
-              key={`user-location-${forceUpdateMarker}`} // <-- Key única que cambia
+              key={`user-location-${forceUpdateMarker}`}
               coordinate={{
                 latitude: location.latitude,
                 longitude: location.longitude,
@@ -195,15 +193,31 @@ const AlertMap = () => {
               description="Ubicación actual del dispositivo"
               pinColor="blue"
             />
-            {alertData.map((alert, index) => (
-              <Marker
-                key={index}
-                coordinate={alert.ubicacion}
-                title={`Alerta: ${alert.tipo}`}
-                description={`Confianza: ${alert.confianza}`}
-                pinColor={getColorFromConfidence(alert.confianza)}
-              />
-            ))}
+
+            {/* Marcadores de alertas */}
+            {alerts.map((alert, index) => {
+              const coords = getAlertCoordinates(alert);
+              if (!coords) {
+                console.warn("Alerta sin coordenadas válidas:", alert);
+                return null;
+              }
+
+              return (
+                <Marker
+                  key={`alert-${alert.id || index}`}
+                  coordinate={coords}
+                  title={`Alerta: ${alert.tipo}`}
+                  description={[
+                    `Confianza: ${(alert.confianza * 100).toFixed(1)}%`,
+                    typeof alert.ubicacion === "object"
+                      ? alert.ubicacion.direccion || "Ubicación no especificada"
+                      : alert.ubicacion?.split("(")[0]?.trim() ||
+                        "Ubicación no especificada",
+                  ].join("\n")}
+                  pinColor={getColorFromConfidence(alert.confianza)}
+                />
+              );
+            })}
           </MapView>
 
           {/* Botón de menú principal */}
