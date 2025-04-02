@@ -41,15 +41,19 @@ const SAFETY_TIPS = [
 export default function HomeScreen() {
 
 
-const router = useRouter();
+  const router = useRouter();
 
-const navigateToMap = () =>{
-  router.push('/(tabs)/pages/mapa');
-}
+  const navigateToMap = () => {
+    router.push('/(tabs)/pages/mapa');
+  }
 
-const navigateToAlertas = () =>{
-  router.push('/(tabs)/pages/alertas');
-}
+  const navigateToPanico = () => {
+    router.push('/panic');
+  }
+
+  const navigateToAlertas = () => {
+    router.push('/(tabs)/pages/alertas');
+  }
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -68,7 +72,7 @@ const navigateToAlertas = () =>{
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       onLayout={onLayoutRootView}
       showsVerticalScrollIndicator={false}
@@ -80,13 +84,13 @@ const navigateToAlertas = () =>{
       </View>
 
       <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.actionButton} onPress={navigateToMap}>
+        <TouchableOpacity style={styles.actionButton} onPress={navigateToPanico}>
           <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
+            colors={['#ef4444', '#dc2626']}
             style={styles.actionGradient}
           >
-            <Map color="#fff" size={24} />
-            <Text style={styles.actionText}>Rutas Seguras</Text>
+            <AlertTriangle color="#fff" size={24} />
+            <Text style={styles.actionText}>Botón de Pánico</Text>
           </LinearGradient>
         </TouchableOpacity>
 

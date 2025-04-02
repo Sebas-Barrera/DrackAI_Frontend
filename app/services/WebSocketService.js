@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 
-const WEBSOCKET_URL = 'ws://192.168.1.72:8080';
+const WEBSOCKET_URL = 'ws://192.168.0.220:8080';
 
 /**
  * @typedef {Object} Ubicacion
